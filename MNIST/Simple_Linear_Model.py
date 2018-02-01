@@ -5,7 +5,7 @@ Created on Thu Feb  1 11:46:00 2018
 @author: I332487
 """
 
-
+### Imports 
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,6 +17,7 @@ print(tf.__version__)
 from tensorflow.examples.tutorials.mnist import input_data
 data = input_data.read_data_sets("data/MNIST/", one_hot=True)
 
+# 打印数据集的大小
 print("Size of:")
 print("- Training-set:\t\t{}".format(len(data.train.labels)))
 print("- Test-set:\t\t{}".format(len(data.test.labels)))
@@ -40,9 +41,9 @@ num_classes = 10
 
 def plot_images(images, cls_true, cls_pred=None):
     assert len(images) == len(cls_true) == 9
-    
-    fig, axes = plt.subplots(3, 3)
-    fig.subplots_adjust(hspace=0.3, wspace=0.3)
+    fig, axes = plt.subplots(3, 3)# 将画布分割成3行3列
+    fig.subplots_adjust(hspace=0.3, wspace=0.3) 
+    # 其中wspace hspace是用来控制宽度和高度百分比, 是用来控制横向和纵向subplot之间的间距
     
     for i, ax in enumerate(axes.flat):
         # Plot image.
@@ -82,15 +83,23 @@ logits = tf.matmul(x, weights) + biases
 y_pred = tf.nn.softmax(logits)
 y_pred_cls = tf.argmax(y_pred, axis=1)
 
+## 目标函数
 cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=y_true)
+# 代价函数
 cost = tf.reduce_mean(cross_entropy)
+# 梯度下降法求代价函数的最小值 
 optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.5).minimize(cost)
+# This is a vector of booleans whether the predicted class equals the true class of each image.
 correct_prediction = tf.equal(y_pred_cls, y_true_cls)
+# This calculates the classification accuracy by first type-casting the vector of booleans to floats, 
+# so that False becomes 0 and True becomes 1, and then calculating the average of these numbers.
 accracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 session = tf.Session()
 session.run(tf.global_variables_initializer())
 
+
+###-----？？？？？？？？？？？？？？？
 batch_size = 100
 
 def optimize(num_iterations):
