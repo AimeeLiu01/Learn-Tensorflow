@@ -89,7 +89,7 @@ cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=y_
 cost = tf.reduce_mean(cross_entropy)
 # 梯度下降法求代价函数的最小值 
 optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.5).minimize(cost)
-# This is a vector of booleans whether the predicted class equals the true class of each image.
+# This is a vector of booleans whether the predicted class equals the true class of each image.代表是否准确的预测  
 correct_prediction = tf.equal(y_pred_cls, y_true_cls)
 # This calculates the classification accuracy by first type-casting the vector of booleans to floats, 
 # so that False becomes 0 and True becomes 1, and then calculating the average of these numbers.
@@ -99,33 +99,49 @@ session = tf.Session()
 session.run(tf.global_variables_initializer())
 
 
-###-----？？？？？？？？？？？？？？？
+###-有在训练集50.000图像。 使用所有这些图像来计算模型的梯度需要很长时间。 
+# 因此，我们使用随机梯度下降，它只在优化器的每次迭代中使用一小批图像。
 batch_size = 100
 
 def optimize(num_iterations):
     for i in range(num_iterations):
+        # 获取一批测试数据
+        # x_batch 代表一批图像  and y_true_batch 代表这批图像的值 .
         x_batch, y_true_batch = data.train.next_batch(batch_size)
+        
+        # 将这批图像放入一个字典中 
+        # 其中 y_true_cls不用放在集合中 因为在训练的过程中没有用到 
         feed_dict_train = {x: x_batch, y_true: y_true_batch}
         session.run(optimizer, feed_dict=feed_dict_train)
 
+# Test-set data 被用作Tensorflow的输入
 feed_dict_test = {x: data.test.images,
                   y_true: data.test.labels,
                   y_true_cls: data.test.cls}
         
+
 def print_accuracy():
+    # Use TensorFlow to compute the accuracy.计算准确度
     acc = session.run(accracy, feed_dict=feed_dict_test)
-    print('******************************************')
     print("Accuracy on test-set: {0:.1%}".format(acc))
     
 
 def print_confusion_matrix():
+    # Get the true classifications for the test-set 得到测试数据集的真实类
     cls_true = data.test.cls
+    # Get the predicted classifications for the test-set 得到测试数据集的预测类 
     cls_pred = session.run(y_pred_cls, feed_dict=feed_dict_test)
+    
+    # Get the confusion matrix using sklearn.
     cm = confusion_matrix(y_true=cls_true,
-                          y_pred=cls_pred)
+                          y_pred=cls_pred) # 得到混淆矩阵 
+    
+    # Print the confusion matrix as text.
     print(cm)
+    # Plot the confusion matrix as an image.
     plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
     
+    # Make various adjustments to the plot
     plt.tight_layout()
     plt.colorbar()
     tick_marks = np.arange(num_classes)
@@ -147,14 +163,14 @@ def plot_example_errors():
     incorrect = (correct == False)
     
     # Get the images from the test-set that have been
-    # incorrectly classified.
+    # incorrectly classified./得到被错误分类的图片 
     images = data.test.images[incorrect]
     
-    # Get the predicted classes for those images.
+    # Get the predicted classes for those images. 得到这些错误分类图片的预测类 
     cls_pred = cls_pred[incorrect]
 
-    # Get the true classes for those images.
-    cls_true = data.test.cls[incorrect]
+    # Get the true classes for those images. 得到这些错误分类图片的真实类 
+    cls_true = data.test.cls[incorrect] 
     
     # Plot the first 9 images.
     plot_images(images=images[0:9],
@@ -199,12 +215,13 @@ def plot_weights():
     # in a single Notebook cell.
     plt.show()
 
-
+# The accuracy on the test-set is 9.8%.
+#  This is because the model has only been initialized and not optimized at all, so it always predicts that the image shows a zero digit,
 print_accuracy()
 plot_example_errors()
 
-
-# Performance after 1 optimization iteration
+print("******************************************")
+print("Performance after 1 optimization iteration")
 optimize(num_iterations=1)
 print_accuracy()
 plot_example_errors()
@@ -212,16 +229,15 @@ plot_example_errors()
 plot_weights()
 
 
-
-# Performance after 10 optimization iterations
+print("******************************************")
+print("Performance after 10 optimization iterations")
 optimize(num_iterations=9)
 print_accuracy()
 plot_example_errors()
-
 plot_weights()
 
-
-# Performance after 1000 opimization iterations
+print("******************************************")
+print("Performance after 1000 opimization iterations")
 optimize(num_iterations=990)
 print_accuracy()
 plot_example_errors()
