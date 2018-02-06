@@ -1,10 +1,10 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sat Feb  3 17:02:02 2018
+Created on Mon Feb  5 17:25:51 2018
 
-@author: liuchang
+@author: I332487
 """
+
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
@@ -13,43 +13,44 @@ import time
 from datetime import timedelta
 import math
 
-# Convolutional Layer 1.
+# Convolutional Layer 1. 第一层卷积层 
 filter_size1 = 5          # Convolution filters are 5 x 5 pixels.
-num_filters1 = 16         # There are 16 of these filters.
+num_filters1 = 16         # There are 16 of these filters. 一共有16个核 （过滤器）
 
-# Convolutional Layer 2.
-filter_size2 = 5          # Convolution filters are 5 x 5 pixels.
-num_filters2 = 36         # There are 36 of these filters.
+# Convolutional Layer 2. 第二层卷积层
+filter_size2 = 5          # Convolution filters are 5 x 5 pixels. 
+num_filters2 = 36         # There are 36 of these filters. 一共有36个核（过滤器） 
 
-# Fully-connected layer.
+# Fully-connected layer.  全连接层（可以看作是全连接层的隐藏层）
 fc_size = 128             # Number of neurons in fully-connected layer.
 
 from tensorflow.examples.tutorials.mnist import input_data
 data = input_data.read_data_sets('data/MNIST/', one_hot=True)
 
 print("Size of:")
-print("- Training-set:\t\t{}".format(len(data.train.labels)))
-print("- Test-set:\t\t{}".format(len(data.test.labels)))
-print("- Validation-set:\t{}".format(len(data.validation.labels)))
+print("- Training-set:\t\t{}".format(len(data.train.labels))) #  训练集
+print("- Test-set:\t\t{}".format(len(data.test.labels))) # 测试集
+print("- Validation-set:\t{}".format(len(data.validation.labels))) # 交叉验证集 
 
-data.test.cls = np.argmax(data.test.labels, axis=1)
+data.test.cls = np.argmax(data.test.labels, axis=1) # 测试集的类 
 
-# We know that MNIST images are 28 pixels in each dimension.
+# MNIST images为28*28像素的集合
 img_size = 28
 
-# Images are stored in one-dimensional arrays of this length.
+# 每张图片被存储在一维向量中 向量的大小为28*28 
 img_size_flat = img_size * img_size
 
-# Tuple with height and width of images used to reshape arrays.
+# Tuple with height and width of images used to reshape arrays. 元组 
 img_shape = (img_size, img_size)
 
 # Number of colour channels for the images: 1 channel for gray-scale.
 num_channels = 1
 
-# Number of classes, one class for each of 10 digits.
+# Number of classes, one class for each of 10 digits. 图片的类 
 num_classes = 10
 
 
+## 这个函数用来在3x3的栅格中画9张图像，然后在每张图像下面写出真实类别和预测类别。
 def plot_images(images, cls_true, cls_pred=None):
     assert len(images) == len(cls_true) == 9
     
@@ -78,27 +79,29 @@ def plot_images(images, cls_true, cls_pred=None):
     # in a single Notebook cell.
     plt.show()
     
-# Get the first images from the test-set.
+# Get the first images from the test-set.从测试集中先拿出这九张图片  
 images = data.test.images[0:9]
 
-# Get the true classes for those images.
+# Get the true classes for those images. 得到这九张图片的类  
 cls_true = data.test.cls[0:9]
 
-# Plot the images and labels using our helper-function above.
+# Plot the images and labels using our helper-function above.将上述的九张图片画出来 
 plot_images(images=images, cls_true=cls_true)
 
-
+# 创建新变量的帮助函数
 def new_weights(shape):
     return tf.Variable(tf.truncated_normal(shape, stddev=0.05))
 
 def new_biases(length):
     return tf.Variable(tf.constant(0.05, shape=[length]))
 
-def new_conv_layer(input,              # The previous layer.
-                   num_input_channels, # Num. channels in prev. layer.
+# 这个函数为TensorFlow在计算图里创建了新的卷积层。这里并没有执行什么计算，只是在TensorFlow图里添加了数学公式。
+# 创建卷积层的帮助函数
+def new_conv_layer(input,              # The previous layer. 上一层
+                   num_input_channels, # Num. channels in prev. layer. 图像数量 
                    filter_size,        # Width and height of each filter.
-                   num_filters,        # Number of filters.
-                   use_pooling=True):  # Use 2x2 max-pooling.
+                   num_filters,        # Number of filters. 
+                   use_pooling=True):  # Use 2x2 max-pooling. 
 
     # Shape of the filter-weights for the convolution.
     # This format is determined by the TensorFlow API.
@@ -153,6 +156,8 @@ def new_conv_layer(input,              # The previous layer.
     return layer, weights
 
 
+
+## 卷积层生成了4维的张量 我们会在卷积层之后 添加一个全连接层 因此我们需要将这个4维的张量转换成可被全连接层使用的2维张量。 
 def flatten_layer(layer):
     # Get the shape of the input layer.
     layer_shape = layer.get_shape()
@@ -178,6 +183,9 @@ def flatten_layer(layer):
     return layer_flat, num_features
 
 
+
+# 这个函数为TensorFlow在计算图中创建了一个全连接层
+# 输入是大小为[num_images, num_inputs]的二维张量。输出是大小为[num_images, num_outputs]的2维张量。
 def new_fc_layer(input,          # The previous layer.
                  num_inputs,     # Num. inputs from prev. layer.
                  num_outputs,    # Num. outputs.
@@ -197,11 +205,15 @@ def new_fc_layer(input,          # The previous layer.
 
     return layer
 
+
+# 占位符变量 数据类型设置为float32，形状设为[None, img_size_flat]，None代表tensor可能保存着任意数量的图像，
+# 每张图象是一个长度为img_size_flat的向量。
 x = tf.placeholder(tf.float32, shape=[None, img_size_flat], name='x')
 x_image = tf.reshape(x, [-1, img_size, img_size, num_channels])
 y_true = tf.placeholder(tf.float32, shape=[None, num_classes], name='y_true')
 y_true_cls = tf.argmax(y_true, axis=1)
 
+# 创建第一个卷积层。将x_image当作输入，创建num_filters1个不同的滤波器，每个滤波器的宽高都与 filter_size1相等。
 layer_conv1, weights_conv1 = \
     new_conv_layer(input=x_image,
                    num_input_channels=num_channels,
@@ -211,6 +223,7 @@ layer_conv1, weights_conv1 = \
     
 print(layer_conv1)
 
+# 创建第二个卷积层 它将第一个卷积层的输出作为输入。输入通道的数量对应着第一个卷积层的滤波数。
 layer_conv2, weights_conv2 = \
     new_conv_layer(input=layer_conv1,
                    num_input_channels=num_filters1,
@@ -219,29 +232,38 @@ layer_conv2, weights_conv2 = \
                    use_pooling=True)
 print(layer_conv2)
 
+# 这个卷积层输出一个4维张量。现在我们想将它作为一个全连接网络的输入，这就需要将它转换成2维张量。
 layer_flat, num_features = flatten_layer(layer_conv2)
 
 print(layer_flat)
 print(num_features)
 
-
+# 往网络中添加一个全连接层。输入是一个前面卷积得到的被转换过的层。
+# 全连接层中的神经元或节点数为fc_size。我们可以用ReLU来学习非线性关系。
 layer_fc1 = new_fc_layer(input=layer_flat,
                          num_inputs=num_features,
                          num_outputs=fc_size,
                          use_relu=True)
 
+# 添加另外一个全连接层，它的输出是一个长度为10的向量，它确定了输入图是属于哪个类别。这层并没有用到ReLU。
 layer_fc2 = new_fc_layer(input=layer_fc1,
                          num_inputs=fc_size,
                          num_outputs=num_classes,
                          use_relu=False)
 
+# 第二个全连接层估算了输入图有多大的可能属于10个类别中的其中一个。然而，这是很粗略的估计并且很难解释，因为数值可能很小或很大，
+# 因此我们会对它们做归一化，将每个元素限制在0到1之间，并且相加为1。这用一个称为softmax的函数来计算的，结果保存在y_pred中。
 y_pred = tf.nn.softmax(layer_fc2)
+# 类别数字是最大元素的索引。
 y_pred_cls = tf.argmax(y_pred, axis=1)
 
+## 交叉熵（cross-entropy）是在分类中使用的性能度量。交叉熵是一个常为正值的连续函数，
+# 如果模型的预测值精准地符合期望的输出，它就等于零。因此，优化的目的就是通过改变网络层的变量来最小化交叉熵。
 cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=layer_fc2,
                                                         labels=y_true)
 cost = tf.reduce_mean(cross_entropy)
 
+# 梯度下降的变体AdamOptimizer
 optimizer = tf.train.AdamOptimizer(learning_rate=1e-4).minimize(cost)
 
 correct_prediction = tf.equal(y_pred_cls, y_true_cls)
@@ -303,6 +325,10 @@ def optimize(num_iterations):
     print("Time usage: " + str(timedelta(seconds=int(round(time_dif)))))
     
 
+
+
+# 用来绘制错误样本的帮助函数
+# 函数用来绘制测试集中被误分类的样本。
 def plot_example_errors(cls_pred, correct):
     # This function is called from print_test_accuracy() below.
 
@@ -332,6 +358,7 @@ def plot_example_errors(cls_pred, correct):
     
 
 
+# 绘制混淆（confusion）矩阵的帮助函数
 def plot_confusion_matrix(cls_pred):
     # This is called from print_test_accuracy() below.
 
@@ -364,7 +391,7 @@ def plot_confusion_matrix(cls_pred):
     plt.show()
 
 
-
+# 展示性能的帮助函数 函数用来打印测试集上的分类准确度。
 # Split the test-set into smaller batches of this size.
 test_batch_size = 256
 
@@ -435,18 +462,28 @@ def print_test_accuracy(show_example_errors=False,
         plot_confusion_matrix(cls_pred=cls_pred)
 
 
-
+# 优化之前的性能
 print_test_accuracy()
+
+# 1次迭代后的性能
 optimize(num_iterations=1)
 print_test_accuracy()
+
+# 100次迭代优化后的性能
 optimize(num_iterations=99) # We already performed 1 iteration above.
 print_test_accuracy(show_example_errors=True)
+
 optimize(num_iterations=900) # We performed 100 iterations above.
 print_test_accuracy(show_example_errors=True)
+
 optimize(num_iterations=9000) # We performed 1000 iterations above.
 print_test_accuracy(show_example_errors=True,
                     show_confusion_matrix=True)
 
+
+
+# 权重和层的可视化
+# 绘制卷积权重的帮助函数
 def plot_conv_weights(weights, input_channel=0):
     # Assume weights are TensorFlow ops for 4-dim variables
     # e.g. weights_conv1 or weights_conv2.
@@ -492,6 +529,8 @@ def plot_conv_weights(weights, input_channel=0):
     # in a single Notebook cell.
     plt.show()
     
+    
+# 绘制卷积层输出的帮助函数
 def plot_conv_layer(layer, image):
     # Assume layer is a TensorFlow op that outputs a 4-dim tensor
     # which is the output of a convolutional layer,
@@ -537,6 +576,7 @@ def plot_conv_layer(layer, image):
     plt.show()
 
 
+# 绘制图像的帮助函数
 def plot_image(image):
     plt.imshow(image.reshape(img_shape),
                interpolation='nearest',
@@ -551,11 +591,16 @@ plot_image(image1)
 image2 = data.test.images[13]
 plot_image(image2)
 
+## 现在绘制第一个卷积层的滤波权重 
 plot_conv_weights(weights=weights_conv1)
+# 下面是将卷积滤波添加到第一张图像的结果。
 plot_conv_layer(layer=layer_conv1, image=image1)
+# 下面是将卷积滤波添加到第二张图像的结果。
 plot_conv_layer(layer=layer_conv1, image=image2)
 
+# 现在绘制第二个卷积层第一个通道的滤波权重。
 plot_conv_weights(weights=weights_conv2, input_channel=0)
+# 这里我们画出第二个卷积层第二个通道的图像。
 plot_conv_weights(weights=weights_conv2, input_channel=1)
 
 plot_conv_layer(layer=layer_conv2, image=image1)
@@ -564,4 +609,3 @@ plot_conv_layer(layer=layer_conv2, image=image2)
 # This has been commented out in case you want to modify and experiment
 # with the Notebook without having to restart it.
 # session.close()
-
